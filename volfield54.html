@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Volfield54 v0.0.9 54Gamez</title>
+    <title>Volfield54 v0.1.0 54Gamez</title>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
@@ -145,7 +145,8 @@
 
         #hand-toggle {
             position: absolute;
-            top: 14px; right: 18px;
+            left: 50%; bottom: 10px;
+            transform: translateX(-50%);
             background: rgba(8,8,22,0.6);
             border: 1.5px solid #444;
             color: #888;
@@ -163,11 +164,10 @@
 
         /* ── Top-right icon bar ───────────────────────────── */
         #icon-bar {
-            position: absolute;
-            top: 8px; right: 8px;
+            align-self: flex-end;
             display: flex;
             gap: 6px;
-            z-index: 15;
+            margin-bottom: 8px;
         }
         .icon-btn {
             background: rgba(0,0,20,0.55);
@@ -255,15 +255,15 @@
         <div id="progress-bar"></div>
     </div>
 
+    <!-- Icon bar above the game area -->
+    <div id="icon-bar">
+        <button class="icon-btn" title="Ayarlar"  onclick="openPanel('settings')">⚙️</button>
+        <button class="icon-btn" title="Rekorlar" onclick="openPanel('leaderboard')">🏆</button>
+        <button class="icon-btn" title="Hakkında" onclick="openPanel('credits')">ℹ️</button>
+    </div>
+
     <div id="game-container">
         <canvas id="gameCanvas" width="600" height="600"></canvas>
-
-        <!-- Top-right icon bar -->
-        <div id="icon-bar">
-            <button class="icon-btn" title="Ayarlar"  onclick="openPanel('settings')">⚙️</button>
-            <button class="icon-btn" title="Rekorlar" onclick="openPanel('leaderboard')">🏆</button>
-            <button class="icon-btn" title="Hakkında" onclick="openPanel('credits')">ℹ️</button>
-        </div>
 
         <!-- Settings panel -->
         <div id="panel-settings" class="panel">
@@ -1016,7 +1016,7 @@ function setupDpad() {
 }
 
 // Hand preference (left/right)
-let handPref = localStorage.getItem("volfied_hand") || "left";
+let handPref = localStorage.getItem("volfiled_hand") || "left";
 function applyHandPref() {
     const dpad = document.getElementById("dpad");
     const tog  = document.getElementById("hand-toggle");
@@ -1025,7 +1025,7 @@ function applyHandPref() {
 }
 function toggleHand() {
     handPref = handPref === "left" ? "right" : "left";
-    localStorage.setItem("volfied_hand", handPref);
+    localStorage.setItem("volfiled_hand", handPref);
     applyHandPref();
 }
 applyHandPref();
