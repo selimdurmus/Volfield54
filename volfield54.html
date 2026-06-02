@@ -1,0 +1,807 @@
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Volfield54 v0.0.8 54Gamez</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            background-color: #0a0a1a;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            min-height: 100vh;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #scale-wrap {
+            transform-origin: top center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #game-container { position: relative; }
+        canvas {
+            border: 3px solid #00ffff44;
+            background-color: #000;
+            box-shadow: 0 0 30px rgba(0,255,255,0.15);
+            display: block;
+        }
+        #ui {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 600px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #aaa;
+        }
+        #ui span { color: #00ffff; }
+        #lives-display span { color: #ff3366; }
+        #progress-bar-container {
+            width: 600px; height: 6px;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            margin-bottom: 8px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        #progress-bar {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #00ffff, #0088ff);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        #game-over {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,10,0.92);
+            padding: 28px 44px;
+            border: 2px solid #ff0055;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+            backdrop-filter: blur(4px);
+            z-index: 10;
+        }
+        #game-over h2 { margin: 0 0 8px 0; font-size: 26px; letter-spacing: 4px; }
+        #game-over p  { color: #aaa; margin: 0 0 18px 0; font-size: 13px; }
+        .btn {
+            background: transparent;
+            color: #00ffff;
+            border: 2px solid #00ffff;
+            padding: 9px 22px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+            margin: 4px;
+            border-radius: 4px;
+        }
+        .btn:hover, .btn:active { background: #00ffff; color: #000; }
+        .btn-danger { color: #ff0055; border-color: #ff0055; }
+        .btn-danger:hover, .btn-danger:active { background: #ff0055; color: #fff; }
+
+        /* ── Mobile D-pad (fixed at bottom, never scaled/clipped) ── */
+        #dpad-wrap {
+            display: none;
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            height: 170px;
+            z-index: 30;
+            align-items: center;
+            justify-content: center;
+            padding: 0 18px;
+            background: linear-gradient(to top, rgba(8,8,22,0.96) 35%, rgba(8,8,22,0));
+            pointer-events: none;            /* wrap itself passes touches through */
+        }
+        #dpad {
+            position: absolute;
+            bottom: 22px;
+            width: 156px;
+            height: 156px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 6px;
+            pointer-events: auto;            /* but the buttons are tappable */
+        }
+        /* left-hand: dpad on left */
+        #dpad.left  { left: 22px; }
+        /* right-hand: dpad on right */
+        #dpad.right { right: 22px; }
+
+        .dpad-btn {
+            background: rgba(0,255,255,0.16);
+            border: 2px solid rgba(0,255,255,0.55);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            color: #00ffff;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.1s;
+            box-shadow: 0 0 8px rgba(0,255,255,0.12);
+        }
+        .dpad-btn:active, .dpad-btn.pressed {
+            background: rgba(0,255,255,0.45);
+            color: #001018;
+        }
+        .dpad-empty { background: none; border: none; pointer-events: none; }
+
+        #hand-toggle {
+            position: absolute;
+            top: 14px; right: 18px;
+            background: rgba(8,8,22,0.6);
+            border: 1.5px solid #444;
+            color: #888;
+            font-size: 12px;
+            padding: 7px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            pointer-events: auto;
+        }
+        #hand-toggle:active { color: #00ffff; border-color: #00ffff; }
+
+        #hint { margin-top: 6px; font-size: 11px; color: #333; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+<div id="scale-wrap">
+    <div id="ui">
+	<div>Volfield54 v0.0.8 54Gamez</div>
+        <div>Alan: <span id="percent">0</span>% / <span id="target-pct">75</span>%</div>
+        <div>Sev: <span id="level-num">1</span></div>
+        <div id="lives-display">Can: <span id="lives">3</span></div>
+    </div>
+    <div id="progress-bar-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        <div id="game-over">
+            <h2 id="over-title">GAME OVER</h2>
+            <p id="over-msg">Boss iz yoluna çarptı!</p>
+            <div>
+                <button class="btn" onclick="nextLevel()" id="next-btn" style="display:none">SONRAKI SEVİYE</button>
+                <button class="btn btn-danger" onclick="resetGame()">YENİDEN OYNA</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="hint">Ok tuşları veya WASD</div>
+</div>
+
+<!-- Mobile D-pad — outside #scale-wrap so it is never scaled or clipped -->
+<div id="dpad-wrap">
+    <button id="hand-toggle" onclick="toggleHand()">SOL EL ◀</button>
+    <div id="dpad" class="left">
+        <div class="dpad-empty"></div>
+        <div class="dpad-btn" id="btn-up">▲</div>
+        <div class="dpad-empty"></div>
+        <div class="dpad-btn" id="btn-left">◀</div>
+        <div class="dpad-empty dpad-center"></div>
+        <div class="dpad-btn" id="btn-right">▶</div>
+        <div class="dpad-empty"></div>
+        <div class="dpad-btn" id="btn-down">▼</div>
+        <div class="dpad-empty"></div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const CSIZE = 600;          // canvas logical size (never changes)
+const GRID  = 600;          // grid pixel size
+const BASE_TARGET = 75;
+
+// Tile size for safe-zone detection — keep in sync with trail brush radius
+const SAFE_RADIUS = 2;      // player checks ±SAFE_RADIUS pixels for claimed ground
+const TRAIL_BRUSH = 5;      // trail wall thickness radius
+
+let grid, player, bosses, lives, currentTrail, isDrawing, gameOver, currentLevel;
+let flashTimer = 0, flashMsg = "";
+let levelBannerTimer = 0;
+let patternCanvas, overlayCanvas, overlayCtx;
+
+// ── Responsive scale ──────────────────────────────────────────────────────────
+function applyScale() {
+    const wrap = document.getElementById("scale-wrap");
+    const mobile = isMobile();
+    const reserve = mobile ? 180 : 0;          // vertical space for the fixed d-pad
+
+    // Measure the wrapper's natural (unscaled) size, then fit it to the viewport.
+    wrap.style.transform = "none";
+    const naturalH = wrap.offsetHeight || (CSIZE + 110);
+    const avW = window.innerWidth  * 0.98;
+    const avH = window.innerHeight - reserve - 8;
+    const scale = Math.min(avW / CSIZE, avH / naturalH, 1);
+
+    wrap.style.transform = `scale(${scale})`;
+    if (mobile) {
+        // Pin to the top; the d-pad lives in the reserved area at the bottom.
+        wrap.style.marginTop = "6px";
+    } else {
+        // Keep it visually centred (transform-origin is top center).
+        wrap.style.marginTop = `-${(naturalH * (1 - scale)) / 2}px`;
+    }
+}
+function isMobile() {
+    return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+}
+window.addEventListener('resize', applyScale);
+applyScale();
+
+// ── Patterns ─────────────────────────────────────────────────────────────────
+function drawLevelPattern(pctx, level) {
+    const W = CSIZE, H = CSIZE, cx = W/2, cy = H/2;
+    pctx.fillStyle = "#050510";
+    pctx.fillRect(0, 0, W, H);
+
+    switch (((level - 1) % 7)) {
+        case 0: { // Mandala
+            pctx.save(); pctx.translate(cx, cy);
+            for (let a = 0; a < 12; a++) {
+                pctx.save(); pctx.rotate((Math.PI*2/12)*a);
+                for (let r = 20; r < 280; r += 18) {
+                    let hue = (r + a*30) % 360;
+                    pctx.strokeStyle = `hsla(${hue},100%,60%,0.6)`;
+                    pctx.lineWidth = 1.2;
+                    pctx.beginPath(); pctx.arc(0,0,r,-0.3,0.3); pctx.stroke();
+                    pctx.fillStyle = `hsla(${hue+60},100%,70%,0.8)`;
+                    pctx.beginPath(); pctx.arc(r,0,3+Math.sin(r/15)*2,0,Math.PI*2); pctx.fill();
+                }
+                pctx.restore();
+            }
+            for (let i=0;i<8;i++){
+                pctx.save(); pctx.rotate((Math.PI*2/8)*i);
+                pctx.fillStyle=`hsla(${i*45},100%,65%,0.7)`;
+                pctx.beginPath(); pctx.ellipse(50,0,40,15,0,0,Math.PI*2); pctx.fill();
+                pctx.restore();
+            }
+            pctx.fillStyle="#fff"; pctx.beginPath(); pctx.arc(0,0,12,0,Math.PI*2); pctx.fill();
+            pctx.restore(); break;
+        }
+        case 1: { // Galaxy
+            for (let i=0;i<800;i++){
+                let x=Math.random()*W, y=Math.random()*H, s=Math.random()*2.5;
+                pctx.fillStyle=`rgba(255,255,255,${0.3+Math.random()*0.6})`;
+                pctx.beginPath(); pctx.arc(x,y,s,0,Math.PI*2); pctx.fill();
+            }
+            for (let arm=0;arm<3;arm++){
+                let ao=(Math.PI*2/3)*arm;
+                for (let i=0;i<300;i++){
+                    let t=i/300, angle=ao+t*Math.PI*4, r=t*260;
+                    let x=cx+Math.cos(angle)*r+(Math.random()-.5)*20;
+                    let y=cy+Math.sin(angle)*r+(Math.random()-.5)*20;
+                    pctx.fillStyle=`hsla(${200+arm*40},100%,80%,${0.6-t*0.4})`;
+                    pctx.beginPath(); pctx.arc(x,y,1.5+Math.random(),0,Math.PI*2); pctx.fill();
+                }
+            }
+            let g1=pctx.createRadialGradient(cx,cy,0,cx,cy,80);
+            g1.addColorStop(0,"rgba(200,180,255,0.9)"); g1.addColorStop(0.5,"rgba(100,80,200,0.3)"); g1.addColorStop(1,"transparent");
+            pctx.fillStyle=g1; pctx.beginPath(); pctx.arc(cx,cy,80,0,Math.PI*2); pctx.fill(); break;
+        }
+        case 2: { // Neon City
+            let sky=pctx.createLinearGradient(0,0,0,H);
+            sky.addColorStop(0,"#000820"); sky.addColorStop(1,"#0a001a");
+            pctx.fillStyle=sky; pctx.fillRect(0,0,W,H);
+            pctx.fillStyle="rgba(200,220,255,0.9)"; pctx.beginPath(); pctx.arc(480,80,35,0,Math.PI*2); pctx.fill();
+            pctx.fillStyle="#000820"; pctx.beginPath(); pctx.arc(495,72,32,0,Math.PI*2); pctx.fill();
+            for(let i=0;i<150;i++){pctx.fillStyle=`rgba(255,255,255,${0.3+Math.random()*0.7})`;pctx.fillRect(Math.random()*W,Math.random()*H*0.6,1,1);}
+            const bl=[{x:0,w:70,h:320},{x:60,w:50,h:250},{x:100,w:80,h:400},{x:170,w:40,h:200},{x:200,w:60,h:350},{x:250,w:90,h:450},{x:330,w:55,h:300},{x:375,w:70,h:500},{x:435,w:45,h:280},{x:470,w:85,h:380},{x:545,w:55,h:420}];
+            const nc=["#ff0088","#00ffcc","#ffaa00","#8800ff","#00aaff"];
+            bl.forEach((b,i)=>{
+                let col=nc[i%nc.length];
+                pctx.fillStyle="#0a0a1a"; pctx.fillRect(b.x,H-b.h,b.w,b.h);
+                pctx.strokeStyle=col; pctx.lineWidth=1.5; pctx.shadowBlur=8; pctx.shadowColor=col;
+                pctx.strokeRect(b.x+.5,H-b.h+.5,b.w-1,b.h-1); pctx.shadowBlur=0;
+                for(let wy=H-b.h+15;wy<H-10;wy+=22)
+                    for(let wx=b.x+8;wx<b.x+b.w-8;wx+=14)
+                        if(Math.random()>.35){pctx.fillStyle=`rgba(${Math.random()>.5?"255,220,100":"100,200,255"},${0.4+Math.random()*0.5})`;pctx.fillRect(wx,wy,8,10);}
+            }); break;
+        }
+        case 3: { // Ocean
+            let ocean=pctx.createLinearGradient(0,0,0,H);
+            ocean.addColorStop(0,"#001830"); ocean.addColorStop(1,"#000a18");
+            pctx.fillStyle=ocean; pctx.fillRect(0,0,W,H);
+            [{amp:18,freq:.020,phase:0,y:120,col:"rgba(0,150,220,.25)"},{amp:22,freq:.015,phase:1,y:200,col:"rgba(0,180,240,.30)"},{amp:20,freq:.018,phase:2,y:300,col:"rgba(0,210,255,.35)"},{amp:25,freq:.012,phase:.5,y:400,col:"rgba(0,230,255,.40)"},{amp:18,freq:.022,phase:3,y:490,col:"rgba(100,240,255,.50)"}].forEach(l=>{
+                pctx.fillStyle=l.col; pctx.beginPath(); pctx.moveTo(0,H);
+                for(let x=0;x<=W;x+=3){let y=l.y+Math.sin(x*l.freq+l.phase)*l.amp+Math.sin(x*l.freq*1.7+l.phase*.5)*(l.amp*.4);pctx.lineTo(x,y);}
+                pctx.lineTo(W,H); pctx.closePath(); pctx.fill();
+            });
+            for(let i=0;i<200;i++){let x=Math.random()*W,y=80+Math.random()*(H-80),r=1+Math.random()*3,g2=pctx.createRadialGradient(x,y,0,x,y,r*3);g2.addColorStop(0,"rgba(0,255,200,0.9)");g2.addColorStop(1,"transparent");pctx.fillStyle=g2;pctx.beginPath();pctx.arc(x,y,r*3,0,Math.PI*2);pctx.fill();}
+            let sunG=pctx.createRadialGradient(cx,60,0,cx,60,55);
+            sunG.addColorStop(0,"rgba(255,220,100,1)"); sunG.addColorStop(.6,"rgba(255,150,0,.5)"); sunG.addColorStop(1,"transparent");
+            pctx.fillStyle=sunG; pctx.beginPath(); pctx.arc(cx,60,55,0,Math.PI*2); pctx.fill(); break;
+        }
+        case 4: { // Sacred Geometry
+            let bg=pctx.createRadialGradient(cx,cy,0,cx,cy,300);
+            bg.addColorStop(0,"#120020"); bg.addColorStop(1,"#000008");
+            pctx.fillStyle=bg; pctx.fillRect(0,0,W,H);
+            const dp=(x,y,r,s,rot,col,lw)=>{pctx.save();pctx.translate(x,y);pctx.rotate(rot);pctx.strokeStyle=col;pctx.lineWidth=lw;pctx.shadowBlur=6;pctx.shadowColor=col;pctx.beginPath();for(let i=0;i<=s;i++){let a=(Math.PI*2/s)*i;i===0?pctx.moveTo(Math.cos(a)*r,Math.sin(a)*r):pctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}pctx.stroke();pctx.shadowBlur=0;pctx.restore();};
+            const ps=[3,4,5,6,7,8,12],pc=["#ff006688","#ff880088","#ffff0088","#00ff8888","#0088ff88","#8800ff88","#ff00ff88"];
+            for(let i=0;i<5;i++){let r=50+i*45;ps.forEach((s,j)=>dp(cx,cy,r,s,i*.3+j*.1,pc[j%pc.length],1));}
+            const fol=(x,y,r,d)=>{if(d<=0)return;pctx.strokeStyle=`rgba(150,100,255,${.15+d*.1})`;pctx.lineWidth=.8;pctx.beginPath();pctx.arc(x,y,r,0,Math.PI*2);pctx.stroke();if(d===2)for(let a=0;a<6;a++)fol(x+Math.cos(a*Math.PI/3)*r,y+Math.sin(a*Math.PI/3)*r,r,d-1);};
+            fol(cx,cy,55,2);
+            for(let i=0;i<12;i++){let a1=(Math.PI*2/12)*i,a2=(Math.PI*2/12)*((i+5)%12);pctx.strokeStyle=`hsla(${i*30},100%,60%,.3)`;pctx.lineWidth=.8;pctx.beginPath();pctx.moveTo(cx+Math.cos(a1)*250,cy+Math.sin(a1)*250);pctx.lineTo(cx+Math.cos(a2)*250,cy+Math.sin(a2)*250);pctx.stroke();}
+            break;
+        }
+        case 5: { // Dragon
+            let bg2=pctx.createLinearGradient(0,0,W,H);bg2.addColorStop(0,"#100500");bg2.addColorStop(1,"#001005");pctx.fillStyle=bg2;pctx.fillRect(0,0,W,H);
+            let pts=[];
+            for(let t=0;t<=1;t+=.005){pts.push([cx+Math.sin(t*Math.PI*4)*200+Math.cos(t*Math.PI*2)*80,50+t*500+Math.sin(t*Math.PI*6)*30]);}
+            pctx.strokeStyle="rgba(0,0,0,.5)";pctx.lineWidth=28;pctx.lineCap="round";pctx.lineJoin="round";pctx.beginPath();pctx.moveTo(pts[0][0]+3,pts[0][1]+3);pts.forEach(p=>pctx.lineTo(p[0]+3,p[1]+3));pctx.stroke();
+            for(let i=0;i<pts.length-1;i++){let t=i/pts.length,hue=100+t*80,g=pctx.createLinearGradient(pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]);g.addColorStop(0,`hsl(${hue},90%,35%)`);g.addColorStop(1,`hsl(${hue+5},90%,40%)`);pctx.strokeStyle=g;pctx.lineWidth=26-t*16;pctx.beginPath();pctx.moveTo(pts[i][0],pts[i][1]);pctx.lineTo(pts[i+1][0],pts[i+1][1]);pctx.stroke();}
+            pctx.lineWidth=1;
+            for(let i=10;i<pts.length-5;i+=8){let[x,y]=pts[i],dx2=pts[i+1][0]-pts[i-1][0],dy2=pts[i+1][1]-pts[i-1][1],angle=Math.atan2(dy2,dx2),r=9-(i/pts.length)*6;pctx.save();pctx.translate(x,y);pctx.rotate(angle+Math.PI/2);pctx.fillStyle="rgba(0,200,80,.5)";pctx.strokeStyle="rgba(0,100,40,.6)";pctx.beginPath();pctx.ellipse(0,0,r,r*.6,0,0,Math.PI);pctx.fill();pctx.stroke();pctx.restore();}
+            let[hx,hy]=pts[0];pctx.save();pctx.fillStyle="#1a6020";pctx.shadowBlur=20;pctx.shadowColor="#00ff60";pctx.beginPath();pctx.ellipse(hx,hy,32,22,-.3,0,Math.PI*2);pctx.fill();pctx.fillStyle="#ff4400";pctx.beginPath();pctx.arc(hx+14,hy-6,8,0,Math.PI*2);pctx.fill();pctx.fillStyle="#000";pctx.beginPath();pctx.arc(hx+16,hy-5,3,0,Math.PI*2);pctx.fill();pctx.restore();
+            let fg=pctx.createRadialGradient(hx+40,hy-30,0,hx+40,hy-30,80);fg.addColorStop(0,"rgba(255,220,0,.9)");fg.addColorStop(.4,"rgba(255,80,0,.5)");fg.addColorStop(1,"transparent");pctx.fillStyle=fg;pctx.beginPath();pctx.arc(hx+40,hy-30,80,0,Math.PI*2);pctx.fill();break;
+        }
+        case 6: { // Circuit Board
+            pctx.fillStyle="#001a08";pctx.fillRect(0,0,W,H);
+            pctx.strokeStyle="rgba(0,80,30,.3)";pctx.lineWidth=.5;
+            for(let x=0;x<W;x+=30){pctx.beginPath();pctx.moveTo(x,0);pctx.lineTo(x,H);pctx.stroke();}
+            for(let y=0;y<H;y+=30){pctx.beginPath();pctx.moveTo(0,y);pctx.lineTo(W,y);pctx.stroke();}
+            const tc=["#00ff60","#00cc44","#44ffaa","#ff8800","#00aaff"],s30=n=>Math.round(n/30)*30;
+            for(let t=0;t<40;t++){let col=tc[t%tc.length],x=s30(Math.random()*W),y=s30(Math.random()*H);pctx.strokeStyle=col;pctx.lineWidth=2;pctx.shadowBlur=5;pctx.shadowColor=col;pctx.beginPath();pctx.moveTo(x,y);for(let s=0;s<6;s++){let nx=s30(x+(Math.random()>.5?90*(Math.random()>.5?1:-1):0)),ny=s30(y+(Math.random()>.5?0:90*(Math.random()>.5?1:-1)));nx=Math.max(0,Math.min(W,nx));ny=Math.max(0,Math.min(H,ny));pctx.lineTo(nx,ny);x=nx;y=ny;}pctx.stroke();pctx.shadowBlur=0;pctx.fillStyle=col;pctx.beginPath();pctx.arc(x,y,5,0,Math.PI*2);pctx.fill();pctx.fillStyle="#001a08";pctx.beginPath();pctx.arc(x,y,2.5,0,Math.PI*2);pctx.fill();}
+            [[cx-60,cy-40,120,80],[80,80,80,50],[440,440,80,50],[100,430,60,40]].forEach(([cx2,cy2,cw,ch])=>{pctx.fillStyle="#003318";pctx.strokeStyle="#00ff60";pctx.lineWidth=1.5;pctx.shadowBlur=8;pctx.shadowColor="#00ff60";pctx.fillRect(cx2,cy2,cw,ch);pctx.strokeRect(cx2,cy2,cw,ch);pctx.shadowBlur=0;for(let p=0;p<4;p++){let px=cx2+15+p*(cw-30)/3;pctx.strokeStyle="#00ff60";pctx.lineWidth=2;pctx.beginPath();pctx.moveTo(px,cy2);pctx.lineTo(px,cy2-10);pctx.stroke();pctx.beginPath();pctx.moveTo(px,cy2+ch);pctx.lineTo(px,cy2+ch+10);pctx.stroke();}});break;
+        }
+    }
+}
+
+// ── Overlay (dark mask) ───────────────────────────────────────────────────────
+function buildOverlayCanvas() {
+    overlayCanvas = document.createElement('canvas');
+    overlayCanvas.width = CSIZE; overlayCanvas.height = CSIZE;
+    overlayCtx = overlayCanvas.getContext('2d');
+    syncOverlay();
+}
+function syncOverlay() {
+    overlayCtx.clearRect(0, 0, CSIZE, CSIZE);
+    const CELL = FILL_CELL;
+
+    for (let x = 0; x < GRID; x += CELL)
+        for (let y = 0; y < GRID; y += CELL) {
+            if (grid[x][y] === 0) {
+                // Unclaimed → heavy dark veil hides the picture here.
+                overlayCtx.fillStyle = "rgba(3,4,12,0.97)";
+                overlayCtx.fillRect(x, y, CELL, CELL);
+            } else {
+                // Claimed → reveal the background art with only a faint cyan sheen,
+                // so it is obvious which areas have been opened.
+                overlayCtx.fillStyle = "rgba(0,210,255,0.07)";
+                overlayCtx.fillRect(x, y, CELL, CELL);
+            }
+        }
+}
+
+// ── Grid ─────────────────────────────────────────────────────────────────────
+function initGrid() {
+    grid = Array(GRID).fill(null).map(() => new Uint8Array(GRID));
+    for (let x = 0; x < GRID; x++)
+        for (let y = 0; y < GRID; y++)
+            if (x < 4 || x >= GRID-4 || y < 4 || y >= GRID-4)
+                grid[x][y] = 1;
+}
+
+// ── Safe-zone helper ──────────────────────────────────────────────────────────
+// Returns true if any claimed cell exists within SAFE_RADIUS of (px,py)
+function isSafeAt(px, py) {
+    const r = SAFE_RADIUS;
+    for (let dx = -r; dx <= r; dx += 2) {
+        for (let dy = -r; dy <= r; dy += 2) {
+            let nx = px + dx, ny = py + dy;
+            if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+            if (grid[nx][ny] === 1) return true;
+        }
+    }
+    return false;
+}
+
+// ── Player ───────────────────────────────────────────────────────────────────
+class Player {
+    constructor() {
+        this.x = 4; this.y = 4;
+        this.speed = 4;
+        this.dx = 0; this.dy = 0;
+        this.invincible = 0;
+    }
+
+    update() {
+        if (this.invincible > 0) this.invincible--;
+        if (this.dx === 0 && this.dy === 0) return;
+
+        let nextX = Math.max(4, Math.min(GRID - 5, this.x + this.dx * this.speed));
+        let nextY = Math.max(4, Math.min(GRID - 5, this.y + this.dy * this.speed));
+        if (nextX === this.x && nextY === this.y) return;
+
+        const onSafe = isSafeAt(nextX, nextY);
+
+        if (!onSafe) {
+            // Entering / continuing in dangerous territory
+            isDrawing = true;
+            this.x = nextX; this.y = nextY;
+            currentTrail.push({ x: this.x, y: this.y });
+            if (this.checkSelfCollision()) { handleLifeLoss("Kendi izine çarptın!"); }
+
+        } else {
+            // On safe ground
+            this.x = nextX; this.y = nextY;
+
+            if (isDrawing) {
+                // Just returned to safety — complete the stroke
+                isDrawing = false;
+                currentTrail.push({ x: this.x, y: this.y });
+                fillArea();
+                currentTrail = [];
+                checkWinCondition();
+            }
+        }
+    }
+
+    checkSelfCollision() {
+        if (currentTrail.length < 14) return false;
+        for (let i = 0; i < currentTrail.length - 12; i++) {
+            if (Math.hypot(this.x - currentTrail[i].x, this.y - currentTrail[i].y) < 4) return true;
+        }
+        return false;
+    }
+
+    draw() {
+        if (this.invincible > 0 && Math.floor(this.invincible / 4) % 2 === 0) return;
+        ctx.save();
+        ctx.shadowBlur = 14; ctx.shadowColor = "#00ffff";
+        ctx.fillStyle = "#00ffff";
+        ctx.fillRect(this.x - 6, this.y - 6, 12, 12);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(this.x - 3, this.y - 3, 4, 4);
+        ctx.restore();
+    }
+}
+
+// ── Boss ─────────────────────────────────────────────────────────────────────
+class Boss {
+    constructor(speed, color) {
+        this.x = CSIZE/2 + (Math.random()-.5)*100;
+        this.y = CSIZE/2 + (Math.random()-.5)*100;
+        this.radius = 11;
+        this.speed = speed;
+        this.color = color || "#ff0055";
+        const a = Math.random() * Math.PI * 2;
+        this.dx = Math.cos(a) * speed;
+        this.dy = Math.sin(a) * speed;
+        this.pulse = Math.random() * Math.PI * 2;
+    }
+
+    update() {
+        this.pulse = (this.pulse + 0.1) % (Math.PI * 2);
+        let nx = this.x + this.dx, ny = this.y + this.dy;
+        let cx2 = Math.floor(nx), cy2 = Math.floor(ny);
+        let bx  = Math.floor(this.x), by = Math.floor(this.y);
+
+        if (cx2 < 4 || cx2 >= GRID-4 || (cx2 >= 0 && cx2 < GRID && by >= 0 && by < GRID && grid[cx2][by] === 1)) {
+            this.dx *= -1; nx = this.x + this.dx; cx2 = Math.floor(nx);
+        }
+        if (cy2 < 4 || cy2 >= GRID-4 || (bx >= 0 && bx < GRID && cy2 >= 0 && cy2 < GRID && grid[bx][cy2] === 1)) {
+            this.dy *= -1; ny = this.y + this.dy;
+        }
+        this.x = nx; this.y = ny;
+
+        if (isDrawing && player.invincible === 0) {
+            for (let pt of currentTrail) {
+                if (Math.hypot(this.x - pt.x, this.y - pt.y) < this.radius + 3) {
+                    handleLifeLoss("Boss izine çarptı!"); return;
+                }
+            }
+        }
+    }
+
+    draw() {
+        const r = this.radius + Math.sin(this.pulse) * 1.5;
+        ctx.save();
+        ctx.shadowBlur = 20; ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,.85)";
+        ctx.beginPath(); ctx.arc(this.x+3, this.y-3, 3.5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "#000";
+        ctx.beginPath(); ctx.arc(this.x+3.5, this.y-2.5, 1.5, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+}
+
+// Spiral outward from (bx,by) to find nearest unclaimed cell (grid===0)
+function findNearestUnclaimed(bx, by) {
+    if (bx >= 0 && bx < GRID && by >= 0 && by < GRID && grid[bx][by] === 0) return [bx, by];
+    for (let r = 1; r <= 60; r++) {
+        for (let dx = -r; dx <= r; dx++) {
+            for (let s of [-r, r]) {
+                let nx = bx+dx, ny = by+s;
+                if (nx >= 0 && nx < GRID && ny >= 0 && ny < GRID && grid[nx][ny] === 0) return [nx, ny];
+                nx = bx+s; ny = by+dx;
+                if (nx >= 0 && nx < GRID && ny >= 0 && ny < GRID && grid[nx][ny] === 0) return [nx, ny];
+            }
+        }
+    }
+    return null; // boss is fully enclosed — no unclaimed cells nearby
+}
+
+// ── Fill Area ─────────────────────────────────────────────────────────────────
+// Cell size for the flood fill — MUST match the granularity used by syncOverlay()
+// and updatePercentage() so claimed/open detection stays consistent everywhere.
+const FILL_CELL = 4;
+
+function fillArea() {
+    // 1) Burn the trail into the grid (these become walls).
+    for (let pt of currentTrail) {
+        for (let dx = -TRAIL_BRUSH; dx <= TRAIL_BRUSH; dx++)
+            for (let dy = -TRAIL_BRUSH; dy <= TRAIL_BRUSH; dy++) {
+                let nx = pt.x+dx, ny = pt.y+dy;
+                if (nx >= 0 && nx < GRID && ny >= 0 && ny < GRID) grid[nx][ny] = 1;
+            }
+    }
+
+    // 2) Flood fill on a coarse grid (FILL_CELL px per cell) starting from each boss.
+    //    Every OPEN cell reachable from a boss is marked. Walls (trail/border) block it.
+    //    Because the flood marks the WHOLE reachable region (not a sparse skeleton),
+    //    only the truly enclosed area — the part the player walled off — is claimed.
+    const CELL = FILL_CELL;
+    const CW = Math.ceil(GRID / CELL);               // coarse grid width/height
+    const isOpenCell = (cx, cy) => {
+        if (cx < 0 || cy < 0 || cx >= CW || cy >= CW) return false;
+        let px = cx*CELL, py = cy*CELL;
+        if (px >= GRID || py >= GRID) return false;
+        return grid[px][py] === 0;                    // 0 = unclaimed / open
+    };
+
+    const visited = new Uint8Array(CW * CW);
+    const queue = [];
+    const pushCell = (cx, cy) => {
+        if (cx < 0 || cy < 0 || cx >= CW || cy >= CW) return;
+        const idx = cy*CW + cx;
+        if (visited[idx] || !isOpenCell(cx, cy)) return;
+        visited[idx] = 1;
+        queue.push(idx);
+    };
+
+    for (let b of bosses) {
+        const bx = Math.floor(b.x), by = Math.floor(b.y);
+        const start = findNearestUnclaimed(bx, by);   // an open pixel near the boss
+        if (start) pushCell(Math.floor(start[0]/CELL), Math.floor(start[1]/CELL));
+    }
+
+    // Breadth-first flood (index queue with a head pointer — no expensive shift()).
+    let head = 0;
+    while (head < queue.length) {
+        const idx = queue[head++];
+        const cx = idx % CW, cy = (idx / CW) | 0;
+        pushCell(cx+1, cy); pushCell(cx-1, cy);
+        pushCell(cx, cy+1); pushCell(cx, cy-1);
+    }
+
+    // 3) Claim every OPEN cell the bosses could NOT reach (the enclosed area).
+    for (let cx = 0; cx < CW; cx++)
+        for (let cy = 0; cy < CW; cy++) {
+            if (visited[cy*CW + cx] || !isOpenCell(cx, cy)) continue;
+            const px = cx*CELL, py = cy*CELL;
+            for (let i = 0; i < CELL; i++)
+                for (let j = 0; j < CELL; j++) {
+                    let nx = px+i, ny = py+j;
+                    if (nx < GRID && ny < GRID) grid[nx][ny] = 1;
+                }
+        }
+
+    syncOverlay();
+    updatePercentage();
+}
+
+// ── UI ────────────────────────────────────────────────────────────────────────
+function updatePercentage() {
+    let claimed = 0;
+    const step = 4, total = (GRID/step)*(GRID/step);
+    for (let x=0;x<GRID;x+=step) for (let y=0;y<GRID;y+=step) if (grid[x][y]===1) claimed++;
+    let pct = Math.floor((claimed/total)*100);
+    let disp = Math.max(0, Math.min(100, Math.floor((pct-3)*1.04)));
+    document.getElementById("percent").innerText = disp;
+    document.getElementById("progress-bar").style.width = Math.min(100,(disp/getTargetPct())*100)+"%";
+    return disp;
+}
+function getTargetPct() { return Math.min(BASE_TARGET + (currentLevel-1)*3, 90); }
+function checkWinCondition() { if (updatePercentage() >= getTargetPct()) endGame(true,"Harika! Alanı ele geçirdin!"); }
+function showFlash(msg) { flashMsg = msg; flashTimer = 90; }
+
+// ── Life & State ──────────────────────────────────────────────────────────────
+function handleLifeLoss(msg) {
+    lives--;
+    document.getElementById("lives").innerText = lives;
+    isDrawing = false; currentTrail = [];
+    showFlash(msg);
+    if (lives <= 0) { endGame(false, msg); return; }
+    player.x = 4; player.y = 4; player.dx = 0; player.dy = 0;
+    player.invincible = 120;
+}
+
+function endGame(win, message) {
+    gameOver = true;
+    const t = document.getElementById("over-title");
+    t.innerText = win ? "TEBRİKLER!" : "GAME OVER";
+    t.style.color = win ? "#00ffaa" : "#ff0055";
+    document.getElementById("over-msg").innerText = message;
+    document.getElementById("game-over").style.display = "block";
+    document.getElementById("game-over").style.borderColor = win ? "#00ffaa" : "#ff0055";
+    document.getElementById("next-btn").style.display = win ? "inline-block" : "none";
+}
+function nextLevel() { currentLevel++; document.getElementById("game-over").style.display="none"; startLevel(); }
+function resetGame() { currentLevel=1; document.getElementById("game-over").style.display="none"; startLevel(); }
+
+function startLevel() {
+    initGrid();
+
+    patternCanvas = document.createElement('canvas');
+    patternCanvas.width = CSIZE; patternCanvas.height = CSIZE;
+    drawLevelPattern(patternCanvas.getContext('2d'), currentLevel);
+    buildOverlayCanvas();
+
+    player = new Player();
+
+    const bossCount = Math.min(1 + Math.floor((currentLevel-1)/2), 4);
+    const bossColors = ["#ff0055","#ff8800","#aa00ff","#ff00cc"];
+    const bossSpeed  = 2.5 + (currentLevel-1)*0.4;
+    bosses = [];
+    for (let i=0;i<bossCount;i++) bosses.push(new Boss(bossSpeed+i*0.2, bossColors[i%bossColors.length]));
+
+    lives=3; currentTrail=[]; isDrawing=false; gameOver=false; flashTimer=0; levelBannerTimer=120;
+
+    document.getElementById("target-pct").innerText = getTargetPct();
+    document.getElementById("lives").innerText = lives;
+    document.getElementById("percent").innerText = "0";
+    document.getElementById("progress-bar").style.width = "0%";
+    document.getElementById("level-num").innerText = currentLevel;
+}
+
+// ── Keyboard input ────────────────────────────────────────────────────────────
+const keys = {};
+window.addEventListener("keydown", e => {
+    keys[e.key] = true;
+    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
+});
+window.addEventListener("keyup", e => { keys[e.key] = false; });
+
+function handleInput() {
+    // Keyboard overrides d-pad state
+    if (keys["ArrowUp"]    || keys["w"] || keys["W"]) { player.dx=0; player.dy=-1; }
+    else if (keys["ArrowDown"]  || keys["s"] || keys["S"]) { player.dx=0; player.dy=1; }
+    else if (keys["ArrowLeft"]  || keys["a"] || keys["A"]) { player.dx=-1; player.dy=0; }
+    else if (keys["ArrowRight"] || keys["d"] || keys["D"]) { player.dx=1;  player.dy=0; }
+    // else: d-pad or no input keeps player.dx/dy unchanged (allows mobile control)
+    else if (!dpadActive()) { player.dx=0; player.dy=0; }
+}
+
+// ── Mobile D-pad ──────────────────────────────────────────────────────────────
+const dpadState = { up:false, down:false, left:false, right:false };
+
+function dpadActive() { return dpadState.up||dpadState.down||dpadState.left||dpadState.right; }
+
+function applyDpad() {
+    if (dpadState.up)    { player.dx=0;  player.dy=-1; }
+    else if (dpadState.down)  { player.dx=0;  player.dy=1;  }
+    else if (dpadState.left)  { player.dx=-1; player.dy=0;  }
+    else if (dpadState.right) { player.dx=1;  player.dy=0;  }
+    else                      { player.dx=0;  player.dy=0;  }
+}
+
+function addDpadEvents(id, dir) {
+    const el = document.getElementById(id);
+    const press = () => { Object.keys(dpadState).forEach(k=>dpadState[k]=false); dpadState[dir]=true; el.classList.add("pressed"); };
+    const release = () => { dpadState[dir]=false; el.classList.remove("pressed"); };
+    el.addEventListener("touchstart", e => { e.preventDefault(); press(); }, { passive:false });
+    el.addEventListener("touchend",   e => { e.preventDefault(); release(); }, { passive:false });
+    el.addEventListener("mousedown",  press);
+    el.addEventListener("mouseup",    release);
+    el.addEventListener("mouseleave", release);
+}
+addDpadEvents("btn-up",    "up");
+addDpadEvents("btn-down",  "down");
+addDpadEvents("btn-left",  "left");
+addDpadEvents("btn-right", "right");
+
+// Show/hide d-pad depending on device
+function setupDpad() {
+    const wrap = document.getElementById("dpad-wrap");
+    if (isMobile()) {
+        wrap.style.display = "flex";
+        document.getElementById("hint").style.display = "none";
+        document.body.style.justifyContent = "flex-start";
+        applyScale();
+    } else {
+        wrap.style.display = "none";
+    }
+}
+
+// Hand preference (left/right)
+let handPref = localStorage.getItem("volfied_hand") || "left";
+function applyHandPref() {
+    const dpad = document.getElementById("dpad");
+    const tog  = document.getElementById("hand-toggle");
+    dpad.className = handPref;
+    tog.innerText  = handPref === "left" ? "SOL EL ◀" : "▶ SAĞ EL";
+}
+function toggleHand() {
+    handPref = handPref === "left" ? "right" : "left";
+    localStorage.setItem("volfied_hand", handPref);
+    applyHandPref();
+}
+applyHandPref();
+setupDpad();
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function draw() {
+    ctx.drawImage(patternCanvas, 0, 0);
+    ctx.drawImage(overlayCanvas, 0, 0);
+
+    if (isDrawing && currentTrail.length > 1) {
+        ctx.save();
+        ctx.shadowBlur = 8; ctx.shadowColor = "#ffea00";
+        ctx.strokeStyle = "#ffea00";
+        ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.lineJoin = "round";
+        ctx.beginPath(); ctx.moveTo(currentTrail[0].x, currentTrail[0].y);
+        for (let i=1;i<currentTrail.length;i++) ctx.lineTo(currentTrail[i].x, currentTrail[i].y);
+        ctx.stroke(); ctx.restore();
+    }
+
+    for (let b of bosses) b.draw();
+    player.draw();
+
+    if (flashTimer > 0) {
+        flashTimer--;
+        ctx.save(); ctx.globalAlpha = Math.min(1, flashTimer/20);
+        ctx.fillStyle = "#ff4466"; ctx.font = "bold 18px 'Courier New'"; ctx.textAlign = "center";
+        ctx.shadowBlur = 10; ctx.shadowColor = "#ff0055";
+        ctx.fillText(flashMsg, CSIZE/2, CSIZE/2-40); ctx.restore();
+    }
+    if (levelBannerTimer > 0) {
+        levelBannerTimer--;
+        ctx.save(); ctx.globalAlpha = Math.min(1, levelBannerTimer/30);
+        ctx.fillStyle = "#00ffff"; ctx.font = "bold 30px 'Courier New'"; ctx.textAlign = "center";
+        ctx.shadowBlur = 20; ctx.shadowColor = "#00ffff";
+        ctx.fillText("SEVİYE " + currentLevel, CSIZE/2, CSIZE/2); ctx.restore();
+    }
+}
+
+// ── Game Loop ─────────────────────────────────────────────────────────────────
+function gameLoop() {
+    if (!gameOver) {
+        // Keyboard sets dx/dy; if d-pad active, override
+        if (dpadActive()) applyDpad(); else handleInput();
+        player.update();
+        if (!gameOver) for (let b of bosses) b.update();
+        if (!gameOver) draw();
+    }
+    requestAnimationFrame(gameLoop);
+}
+
+resetGame();
+gameLoop();
+</script>
+</body>
+</html>
