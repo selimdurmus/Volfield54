@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Volfield54 v0.0.8 54Gamez</title>
+    <title>Volfield54 v0.0.9 54Gamez</title>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
@@ -160,14 +160,94 @@
         #hand-toggle:active { color: #00ffff; border-color: #00ffff; }
 
         #hint { margin-top: 6px; font-size: 11px; color: #333; letter-spacing: 1px; }
+
+        /* ── Top-right icon bar ───────────────────────────── */
+        #icon-bar {
+            position: absolute;
+            top: 8px; right: 8px;
+            display: flex;
+            gap: 6px;
+            z-index: 15;
+        }
+        .icon-btn {
+            background: rgba(0,0,20,0.55);
+            border: 1.5px solid rgba(0,255,255,0.4);
+            color: #00ffff;
+            width: 34px; height: 34px;
+            border-radius: 8px;
+            font-size: 17px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .icon-btn:hover, .icon-btn:active { background: #00ffff; color: #001018; }
+
+        /* ── Modal panels (settings / leaderboard / credits) ── */
+        .panel {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,12,0.95);
+            border: 2px solid #00ffff;
+            border-radius: 14px;
+            padding: 22px 26px;
+            min-width: 300px;
+            max-width: 86%;
+            text-align: left;
+            display: none;
+            backdrop-filter: blur(5px);
+            z-index: 20;
+            box-shadow: 0 0 40px rgba(0,255,255,0.2);
+        }
+        .panel h3 {
+            margin: 0 0 16px 0; font-size: 18px; letter-spacing: 3px;
+            text-align: center; color: #00ffff; text-transform: uppercase;
+        }
+        .panel-row {
+            display: flex; justify-content: space-between; align-items: center;
+            margin: 12px 0; font-size: 13px; color: #cdd; letter-spacing: 1px;
+        }
+        .toggle-btn {
+            background: transparent; border: 1.5px solid #00ffff; color: #00ffff;
+            padding: 6px 14px; border-radius: 6px; cursor: pointer;
+            font-family: 'Courier New', monospace; font-size: 12px; font-weight: bold;
+            letter-spacing: 1px; min-width: 96px; text-align: center;
+        }
+        .toggle-btn.off { border-color: #556; color: #889; }
+        .panel-close {
+            display: block; margin: 18px auto 0; background: transparent;
+            border: 2px solid #ff0055; color: #ff0055; padding: 8px 24px;
+            border-radius: 6px; cursor: pointer; font-family: 'Courier New', monospace;
+            font-weight: bold; letter-spacing: 2px;
+        }
+        .panel-close:hover, .panel-close:active { background: #ff0055; color: #fff; }
+        #lb-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        #lb-table th, #lb-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #223; }
+        #lb-table th { color: #00ffff; letter-spacing: 1px; }
+        #lb-table td { color: #cdd; }
+        #lb-empty { color: #889; font-size: 12px; text-align: center; padding: 10px 0; }
+        .credits-line { font-size: 13px; color: #cdd; line-height: 1.7; letter-spacing: 0.5px; }
+        .credits-line b { color: #00ffff; }
+        .credits-brand { color: #ff8800; font-weight: bold; }
+
+        /* ── Light theme ──────────────────────────────────── */
+        body.light-theme { background-color: #c8d0e0; color: #102030; }
+        body.light-theme #ui { color: #335; }
+        body.light-theme #hint { color: #aab; }
+        body.light-theme .panel { background: rgba(240,244,252,0.97); border-color: #0077aa; color: #102030; }
+        body.light-theme .panel h3 { color: #0077aa; }
+        body.light-theme .panel-row { color: #234; }
+        body.light-theme #lb-table td { color: #234; }
+        body.light-theme .credits-line { color: #234; }
     </style>
 </head>
 <body>
 
 <div id="scale-wrap">
     <div id="ui">
-	<div>Volfield54 v0.0.8 54Gamez</div>
+	<div>Volfield54 v0.0.9 54Gamez</div>
         <div>Alan: <span id="percent">0</span>% / <span id="target-pct">75</span>%</div>
+        <div id="time-display">Süre: <span id="time">00:00</span></div>
         <div>Sev: <span id="level-num">1</span></div>
         <div id="lives-display">Can: <span id="lives">3</span></div>
     </div>
@@ -177,6 +257,56 @@
 
     <div id="game-container">
         <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+        <!-- Top-right icon bar -->
+        <div id="icon-bar">
+            <button class="icon-btn" title="Ayarlar"  onclick="openPanel('settings')">⚙️</button>
+            <button class="icon-btn" title="Rekorlar" onclick="openPanel('leaderboard')">🏆</button>
+            <button class="icon-btn" title="Hakkında" onclick="openPanel('credits')">ℹ️</button>
+        </div>
+
+        <!-- Settings panel -->
+        <div id="panel-settings" class="panel">
+            <h3>⚙️ Ayarlar</h3>
+            <div class="panel-row">
+                <span>El tercihi</span>
+                <button class="toggle-btn" id="set-hand" onclick="settingHand()">SOL EL</button>
+            </div>
+            <div class="panel-row">
+                <span>Süre göstergesi</span>
+                <button class="toggle-btn" id="set-timer" onclick="settingTimer()">AÇIK</button>
+            </div>
+            <div class="panel-row">
+                <span>Arka plan</span>
+                <button class="toggle-btn" id="set-theme" onclick="settingTheme()">KOYU</button>
+            </div>
+            <button class="panel-close" onclick="closePanel()">KAPAT</button>
+        </div>
+
+        <!-- Leaderboard panel -->
+        <div id="panel-leaderboard" class="panel">
+            <h3>🏆 Rekorlar</h3>
+            <table id="lb-table">
+                <thead><tr><th>#</th><th>Puan</th><th>Sev</th><th>Tarih</th></tr></thead>
+                <tbody id="lb-body"></tbody>
+            </table>
+            <div id="lb-empty" style="display:none">Henüz kayıt yok. İlk rekoru sen kur!</div>
+            <button class="panel-close" onclick="closePanel()">KAPAT</button>
+        </div>
+
+        <!-- Credits panel -->
+        <div id="panel-credits" class="panel">
+            <h3>ℹ️ Hakkında</h3>
+            <div class="credits-line">
+                <b>Volfield v0.0.9</b> · 54Gamez<br><br>
+                Programcılar:<br>
+                Yavuz Selim DURMUŞ &amp; Selim DURMUŞ<br><br>
+                <span class="credits-brand">MyBetaSoft · MyBetaSoftware</span><br>
+                <span class="credits-brand">TrLab · SkyLazarus</span>
+            </div>
+            <button class="panel-close" onclick="closePanel()">KAPAT</button>
+        </div>
+
         <div id="game-over">
             <h2 id="over-title">GAME OVER</h2>
             <p id="over-msg">Boss iz yoluna çarptı!</p>
@@ -222,6 +352,19 @@ let grid, player, bosses, lives, currentTrail, isDrawing, gameOver, currentLevel
 let flashTimer = 0, flashMsg = "";
 let levelBannerTimer = 0;
 let patternCanvas, overlayCanvas, overlayCtx;
+
+// New in v0.0.9
+let paused = false;          // true while a panel is open
+let score = 0;               // running score for the current game
+let lastPct = 0;             // last claimed % (to score the delta on each fill)
+let elapsedMs = 0;           // play time this game (ms)
+let lastTick = 0;            // timestamp of previous frame
+let loopStarted = false;     // guard against starting the RAF loop twice
+
+// How close (px) an unclaimed cell must be for a claimed spot to count as a
+// walkable BORDER. Volf may only travel along borders, never through the
+// deep interior of already-opened areas.
+const BORDER_BAND = 10;
 
 // ── Responsive scale ──────────────────────────────────────────────────────────
 function applyScale() {
@@ -418,8 +561,45 @@ function isSafeAt(px, py) {
     return false;
 }
 
-// ── Player ───────────────────────────────────────────────────────────────────
-class Player {
+// True if an UNCLAIMED cell exists within radius r of (px,py).
+function unclaimedNear(px, py, r) {
+    for (let dx = -r; dx <= r; dx += 2) {
+        for (let dy = -r; dy <= r; dy += 2) {
+            let nx = px + dx, ny = py + dy;
+            if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+            if (grid[nx][ny] === 0) return true;
+        }
+    }
+    return false;
+}
+
+// A position is a walkable BORDER if it sits on claimed ground AND an unclaimed
+// cell is close by. This keeps Volf travelling along the edges of opened areas
+// (and the outer frame) instead of roaming freely through their interiors.
+function isBorderPos(px, py) {
+    return isSafeAt(px, py) && unclaimedNear(px, py, BORDER_BAND);
+}
+
+// After a fill the area around Volf can become solid interior; snap Volf back to
+// the nearest border cell so it is never trapped inside claimed ground.
+function snapPlayerToBorder() {
+    if (!player) return;
+    let bx = Math.round(player.x), by = Math.round(player.y);
+    if (isBorderPos(bx, by)) return;
+    for (let r = 2; r <= 120; r += 2) {
+        for (let dx = -r; dx <= r; dx += 2) {
+            for (let dy = -r; dy <= r; dy += 2) {
+                if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue; // ring only
+                let nx = bx + dx, ny = by + dy;
+                if (nx < 4 || nx > GRID-5 || ny < 4 || ny > GRID-5) continue;
+                if (isBorderPos(nx, ny)) { player.x = nx; player.y = ny; return; }
+            }
+        }
+    }
+}
+
+// ── Volf (the player) ──────────────────────────────────────────────────────────
+class Volf {
     constructor() {
         this.x = 4; this.y = 4;
         this.speed = 4;
@@ -435,28 +615,36 @@ class Player {
         let nextY = Math.max(4, Math.min(GRID - 5, this.y + this.dy * this.speed));
         if (nextX === this.x && nextY === this.y) return;
 
-        const onSafe = isSafeAt(nextX, nextY);
+        const nextSafe = isSafeAt(nextX, nextY);
 
-        if (!onSafe) {
-            // Entering / continuing in dangerous territory
+        if (!nextSafe) {
+            // Entering / continuing in unclaimed (dangerous) territory → drawing.
             isDrawing = true;
             this.x = nextX; this.y = nextY;
             currentTrail.push({ x: this.x, y: this.y });
             if (this.checkSelfCollision()) { handleLifeLoss("Kendi izine çarptın!"); }
 
-        } else {
-            // On safe ground
+        } else if (isDrawing) {
+            // Returning to safe ground → always allowed; complete the stroke.
+            this.x = nextX; this.y = nextY;
+            isDrawing = false;
+            currentTrail.push({ x: this.x, y: this.y });
+            fillArea();
+            currentTrail = [];
+            snapPlayerToBorder();      // never end up trapped inside claimed ground
+            checkWinCondition();
+
+        } else if (isBorderPos(nextX, nextY)) {
+            // Free movement is allowed ONLY along borders (edges of opened areas
+            // and the outer frame) — not through the interior of opened areas.
             this.x = nextX; this.y = nextY;
 
-            if (isDrawing) {
-                // Just returned to safety — complete the stroke
-                isDrawing = false;
-                currentTrail.push({ x: this.x, y: this.y });
-                fillArea();
-                currentTrail = [];
-                checkWinCondition();
-            }
+        } else if (!isBorderPos(this.x, this.y)) {
+            // Safety net: if Volf is somehow already inside solid interior, let it
+            // crawl back across claimed ground until it reaches a border again.
+            this.x = nextX; this.y = nextY;
         }
+        // else: on a border, trying to enter deep interior → blocked.
     }
 
     checkSelfCollision() {
@@ -622,13 +810,95 @@ function updatePercentage() {
     for (let x=0;x<GRID;x+=step) for (let y=0;y<GRID;y+=step) if (grid[x][y]===1) claimed++;
     let pct = Math.floor((claimed/total)*100);
     let disp = Math.max(0, Math.min(100, Math.floor((pct-3)*1.04)));
+    // Score the newly opened area (10 pts per % gained).
+    if (disp > lastPct) { score += (disp - lastPct) * 10; lastPct = disp; }
     document.getElementById("percent").innerText = disp;
     document.getElementById("progress-bar").style.width = Math.min(100,(disp/getTargetPct())*100)+"%";
     return disp;
 }
 function getTargetPct() { return Math.min(BASE_TARGET + (currentLevel-1)*3, 90); }
-function checkWinCondition() { if (updatePercentage() >= getTargetPct()) endGame(true,"Harika! Alanı ele geçirdin!"); }
+function checkWinCondition() {
+    if (updatePercentage() >= getTargetPct()) {
+        score += currentLevel * 200;            // level-clear bonus
+        endGame(true, "Harika! Alanı ele geçirdin!");
+    }
+}
 function showFlash(msg) { flashMsg = msg; flashTimer = 90; }
+
+// ── Timer ───────────────────────────────────────────────────────────────────────
+function formatTime(ms) {
+    let s = Math.floor(ms/1000);
+    let m = Math.floor(s/60); s %= 60;
+    return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+}
+function updateTimerUI() { document.getElementById("time").innerText = formatTime(elapsedMs); }
+
+// ── Settings (persisted) ─────────────────────────────────────────────────────────
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch(e){ return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch(e){} }
+
+let timerOn = lsGet("volfield_timer", "on") === "on";
+let themeLight = lsGet("volfield_theme", "dark") === "light";
+
+function applyTimerPref() {
+    document.getElementById("time-display").style.display = timerOn ? "" : "none";
+}
+function applyThemePref() {
+    document.body.classList.toggle("light-theme", themeLight);
+}
+function syncSettingButtons() {
+    const h = document.getElementById("set-hand");
+    h.innerText = handPref === "left" ? "SOL EL" : "SAĞ EL";
+    const t = document.getElementById("set-timer");
+    t.innerText = timerOn ? "AÇIK" : "KAPALI"; t.classList.toggle("off", !timerOn);
+    const th = document.getElementById("set-theme");
+    th.innerText = themeLight ? "AÇIK" : "KOYU"; th.classList.toggle("off", themeLight);
+}
+function settingHand()  { toggleHand(); syncSettingButtons(); }
+function settingTimer() { timerOn = !timerOn; lsSet("volfield_timer", timerOn?"on":"off"); applyTimerPref(); syncSettingButtons(); }
+function settingTheme() { themeLight = !themeLight; lsSet("volfield_theme", themeLight?"light":"dark"); applyThemePref(); syncSettingButtons(); }
+
+// ── Leaderboard (persisted top 10) ────────────────────────────────────────────────
+function loadScores() {
+    try { return JSON.parse(lsGet("volfield_scores", "[]")) || []; } catch(e){ return []; }
+}
+function recordScore() {
+    if (score <= 0) return;
+    let list = loadScores();
+    list.push({ score: score, level: currentLevel, date: new Date().toLocaleDateString("tr-TR") });
+    list.sort((a,b) => b.score - a.score);
+    list = list.slice(0, 10);
+    lsSet("volfield_scores", JSON.stringify(list));
+}
+function renderLeaderboard() {
+    const list = loadScores();
+    const body = document.getElementById("lb-body");
+    const empty = document.getElementById("lb-empty");
+    body.innerHTML = "";
+    if (list.length === 0) { empty.style.display = "block"; return; }
+    empty.style.display = "none";
+    list.forEach((e, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${i+1}</td><td>${e.score}</td><td>${e.level}</td><td>${e.date}</td>`;
+        body.appendChild(tr);
+    });
+}
+
+// ── Panels ─────────────────────────────────────────────────────────────────────
+function openPanel(name) {
+    closePanel();
+    if (name === "settings")    syncSettingButtons();
+    if (name === "leaderboard") renderLeaderboard();
+    document.getElementById("panel-" + name).style.display = "block";
+    paused = true;
+}
+function closePanel() {
+    ["settings","leaderboard","credits"].forEach(n => {
+        document.getElementById("panel-" + n).style.display = "none";
+    });
+    paused = false;
+    lastTick = 0;   // avoid a big time jump when resuming
+}
 
 // ── Life & State ──────────────────────────────────────────────────────────────
 function handleLifeLoss(msg) {
@@ -643,16 +913,21 @@ function handleLifeLoss(msg) {
 
 function endGame(win, message) {
     gameOver = true;
+    if (!win) recordScore();           // game truly ended → save the run's score
     const t = document.getElementById("over-title");
     t.innerText = win ? "TEBRİKLER!" : "GAME OVER";
     t.style.color = win ? "#00ffaa" : "#ff0055";
-    document.getElementById("over-msg").innerText = message;
+    document.getElementById("over-msg").innerText = message + "  ·  Puan: " + score;
     document.getElementById("game-over").style.display = "block";
     document.getElementById("game-over").style.borderColor = win ? "#00ffaa" : "#ff0055";
     document.getElementById("next-btn").style.display = win ? "inline-block" : "none";
 }
 function nextLevel() { currentLevel++; document.getElementById("game-over").style.display="none"; startLevel(); }
-function resetGame() { currentLevel=1; document.getElementById("game-over").style.display="none"; startLevel(); }
+function resetGame() {
+    currentLevel = 1; score = 0;
+    document.getElementById("game-over").style.display = "none";
+    startLevel();
+}
 
 function startLevel() {
     initGrid();
@@ -662,7 +937,7 @@ function startLevel() {
     drawLevelPattern(patternCanvas.getContext('2d'), currentLevel);
     buildOverlayCanvas();
 
-    player = new Player();
+    player = new Volf();
 
     const bossCount = Math.min(1 + Math.floor((currentLevel-1)/2), 4);
     const bossColors = ["#ff0055","#ff8800","#aa00ff","#ff00cc"];
@@ -671,12 +946,14 @@ function startLevel() {
     for (let i=0;i<bossCount;i++) bosses.push(new Boss(bossSpeed+i*0.2, bossColors[i%bossColors.length]));
 
     lives=3; currentTrail=[]; isDrawing=false; gameOver=false; flashTimer=0; levelBannerTimer=120;
+    paused=false; lastPct=0; elapsedMs=0; lastTick=0;
 
     document.getElementById("target-pct").innerText = getTargetPct();
     document.getElementById("lives").innerText = lives;
     document.getElementById("percent").innerText = "0";
     document.getElementById("progress-bar").style.width = "0%";
     document.getElementById("level-num").innerText = currentLevel;
+    updateTimerUI();
 }
 
 // ── Keyboard input ────────────────────────────────────────────────────────────
@@ -753,6 +1030,8 @@ function toggleHand() {
 }
 applyHandPref();
 setupDpad();
+applyTimerPref();
+applyThemePref();
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function draw() {
@@ -789,19 +1068,34 @@ function draw() {
 }
 
 // ── Game Loop ─────────────────────────────────────────────────────────────────
-function gameLoop() {
-    if (!gameOver) {
-        // Keyboard sets dx/dy; if d-pad active, override
-        if (dpadActive()) applyDpad(); else handleInput();
-        player.update();
-        if (!gameOver) for (let b of bosses) b.update();
-        if (!gameOver) draw();
+// Wrapped in try/catch and ALWAYS reschedules: a stray error in one frame can no
+// longer kill the animation loop (which previously left the screen "frozen").
+function gameLoop(now) {
+    try {
+        if (!gameOver && !paused) {
+            // Accumulate play time.
+            if (lastTick) elapsedMs += Math.min(now - lastTick, 100);
+            lastTick = now || 0;
+            if (timerOn) updateTimerUI();
+
+            // Keyboard sets dx/dy; if d-pad active, override.
+            if (dpadActive()) applyDpad(); else handleInput();
+            player.update();
+            if (!gameOver) for (let b of bosses) b.update();
+            if (!gameOver) draw();
+        } else {
+            lastTick = 0;           // paused / over → don't count this gap
+        }
+    } catch (err) {
+        // Surface the problem without breaking the loop.
+        console.error("Volfield frame error:", err);
     }
     requestAnimationFrame(gameLoop);
 }
 
 resetGame();
-gameLoop();
+if (!loopStarted) { loopStarted = true; requestAnimationFrame(gameLoop); }
+
 </script>
 </body>
 </html>
