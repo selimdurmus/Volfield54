@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Volfield54 v0.1.1 54Gamez</title>
+    <title>Volfield54 v0.1.0 54Gamez</title>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
@@ -99,66 +99,49 @@
             display: none;
             position: fixed;
             left: 0; right: 0; bottom: 0;
-            height: 190px;
+            height: 170px;
             z-index: 30;
             align-items: center;
             justify-content: center;
             padding: 0 18px;
             background: linear-gradient(to top, rgba(8,8,22,0.96) 35%, rgba(8,8,22,0));
-            pointer-events: none;
+            pointer-events: none;            /* wrap itself passes touches through */
         }
         #dpad {
             position: absolute;
-            bottom: 18px;
-            width: 164px;
-            height: 164px;
-            border-radius: 50%;
-            overflow: hidden;
-            box-shadow: 0 0 24px rgba(0,255,255,0.18), 0 0 0 2px rgba(0,255,255,0.25);
-            pointer-events: auto;
+            bottom: 22px;
+            width: 156px;
+            height: 156px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 6px;
+            pointer-events: auto;            /* but the buttons are tappable */
         }
+        /* left-hand: dpad on left */
         #dpad.left  { left: 22px; }
+        /* right-hand: dpad on right */
         #dpad.right { right: 22px; }
 
-        .dpad-sector {
-            position: absolute;
-            width: 100%; height: 100%;
-            background: rgba(60,80,100,0.55);
+        .dpad-btn {
+            background: rgba(0,255,255,0.16);
+            border: 2px solid rgba(0,255,255,0.55);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            color: #00ffff;
             cursor: pointer;
             user-select: none;
-            transition: background 0.08s;
+            transition: background 0.1s;
+            box-shadow: 0 0 8px rgba(0,255,255,0.12);
         }
-        #btn-up    { clip-path: polygon(50% 50%, 3% 3%, 97% 3%); }
-        #btn-right { clip-path: polygon(50% 50%, 97% 3%, 97% 97%); }
-        #btn-down  { clip-path: polygon(50% 50%, 97% 97%, 3% 97%); }
-        #btn-left  { clip-path: polygon(50% 50%, 3% 97%, 3% 3%); }
-
-        .dpad-sector:active, .dpad-sector.pressed {
-            background: rgba(0,210,255,0.45);
+        .dpad-btn:active, .dpad-btn.pressed {
+            background: rgba(0,255,255,0.45);
+            color: #001018;
         }
-        .dpad-arrow {
-            position: absolute;
-            color: rgba(220,235,255,0.85);
-            font-size: 15px;
-            pointer-events: none;
-            line-height: 1;
-        }
-        #btn-up    .dpad-arrow { top: 18%; left: 50%; transform: translateX(-50%); }
-        #btn-right .dpad-arrow { top: 50%; right: 17%; transform: translateY(-50%); }
-        #btn-down  .dpad-arrow { bottom: 18%; left: 50%; transform: translateX(-50%); }
-        #btn-left  .dpad-arrow { top: 50%; left: 17%; transform: translateY(-50%); }
-
-        #dpad-center {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%,-50%);
-            width: 46px; height: 46px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #0d1525 60%, #152030 100%);
-            border: 1px solid rgba(0,255,255,0.18);
-            z-index: 10;
-            pointer-events: none;
-        }
+        .dpad-empty { background: none; border: none; pointer-events: none; }
 
         #hand-toggle {
             position: absolute;
@@ -262,7 +245,7 @@
 
 <div id="scale-wrap">
     <div id="ui">
-	<div>Volfield54 v0.1.1 54Gamez</div>
+	<div>Volfield54 v0.0.9 54Gamez</div>
         <div>Alan: <span id="percent">0</span>% / <span id="target-pct">75</span>%</div>
         <div id="time-display">Süre: <span id="time">00:00</span></div>
         <div>Sev: <span id="level-num">1</span></div>
@@ -315,7 +298,7 @@
         <div id="panel-credits" class="panel">
             <h3>ℹ️ Hakkında</h3>
             <div class="credits-line">
-                <b>Volfield v0.1.1</b> · 54Gamez<br><br>
+                <b>Volfield v0.0.9</b> · 54Gamez<br><br>
                 Programcılar:<br>
                 Yavuz Selim DURMUŞ &amp; Selim DURMUŞ<br><br>
                 <span class="credits-brand">MyBetaSoft · MyBetaSoftware</span><br>
@@ -341,11 +324,15 @@
 <div id="dpad-wrap">
     <button id="hand-toggle" onclick="toggleHand()">SOL EL ◀</button>
     <div id="dpad" class="left">
-        <div class="dpad-sector" id="btn-up"><span class="dpad-arrow">&#x2227;</span></div>
-        <div class="dpad-sector" id="btn-right"><span class="dpad-arrow">&#x3009;</span></div>
-        <div class="dpad-sector" id="btn-down"><span class="dpad-arrow">&#x2228;</span></div>
-        <div class="dpad-sector" id="btn-left"><span class="dpad-arrow">&#x3008;</span></div>
-        <div id="dpad-center"></div>
+        <div class="dpad-empty"></div>
+        <div class="dpad-btn" id="btn-up">▲</div>
+        <div class="dpad-empty"></div>
+        <div class="dpad-btn" id="btn-left">◀</div>
+        <div class="dpad-empty dpad-center"></div>
+        <div class="dpad-btn" id="btn-right">▶</div>
+        <div class="dpad-empty"></div>
+        <div class="dpad-btn" id="btn-down">▼</div>
+        <div class="dpad-empty"></div>
     </div>
 </div>
 
@@ -653,8 +640,9 @@ class Volf {
             this.x = nextX; this.y = nextY;
 
         } else if (!isBorderPos(this.x, this.y)) {
-            // Safety net: Volf ended up inside solid interior — snap to nearest border.
-            snapPlayerToBorder();
+            // Safety net: if Volf is somehow already inside solid interior, let it
+            // crawl back across claimed ground until it reaches a border again.
+            this.x = nextX; this.y = nextY;
         }
         // else: on a border, trying to enter deep interior → blocked.
     }
@@ -669,31 +657,12 @@ class Volf {
 
     draw() {
         if (this.invincible > 0 && Math.floor(this.invincible / 4) % 2 === 0) return;
-        const t = elapsedMs / 1000;
         ctx.save();
-        // Heartbeat pulsing rings
-        for (let i = 0; i < 3; i++) {
-            const phase = ((t * 1.8 + i * 0.33) % 1);
-            const r = 8 + phase * 18;
-            const alpha = (1 - phase) * 0.55;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(0,255,255,${alpha})`;
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-        }
-        // Main circle
-        ctx.shadowBlur = 16; ctx.shadowColor = "#00ffff";
+        ctx.shadowBlur = 14; ctx.shadowColor = "#00ffff";
         ctx.fillStyle = "#00ffff";
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 7, 0, Math.PI * 2);
-        ctx.fill();
-        // Inner highlight
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
-        ctx.beginPath();
-        ctx.arc(this.x - 2, this.y - 2, 2.5, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.fillRect(this.x - 6, this.y - 6, 12, 12);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(this.x - 3, this.y - 3, 4, 4);
         ctx.restore();
     }
 }
@@ -752,7 +721,7 @@ class Boss {
 // Spiral outward from (bx,by) to find nearest unclaimed cell (grid===0)
 function findNearestUnclaimed(bx, by) {
     if (bx >= 0 && bx < GRID && by >= 0 && by < GRID && grid[bx][by] === 0) return [bx, by];
-    for (let r = 1; r <= 300; r++) {
+    for (let r = 1; r <= 60; r++) {
         for (let dx = -r; dx <= r; dx++) {
             for (let s of [-r, r]) {
                 let nx = bx+dx, ny = by+s;
@@ -762,18 +731,7 @@ function findNearestUnclaimed(bx, by) {
             }
         }
     }
-    return null;
-}
-
-// After a fill, teleport any boss that landed in claimed territory to nearest open cell.
-function repositionBosses() {
-    for (let b of bosses) {
-        const bx = Math.floor(b.x), by = Math.floor(b.y);
-        if (bx < 0 || bx >= GRID || by < 0 || by >= GRID || grid[bx][by] === 1) {
-            const pos = findNearestUnclaimed(bx, by);
-            if (pos) { b.x = pos[0]; b.y = pos[1]; }
-        }
-    }
+    return null; // boss is fully enclosed — no unclaimed cells nearby
 }
 
 // ── Fill Area ─────────────────────────────────────────────────────────────────
@@ -843,7 +801,6 @@ function fillArea() {
 
     syncOverlay();
     updatePercentage();
-    repositionBosses();
 }
 
 // ── UI ────────────────────────────────────────────────────────────────────────
